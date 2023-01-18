@@ -2,7 +2,6 @@
 using Dalamud.Logging;
 using Dalamud.Utility.Signatures;
 using ImGuiNET;
-using Lumina.Excel.GeneratedSheets;
 using System;
 
 namespace BorderlessFix;
@@ -13,7 +12,8 @@ public unsafe class WindowHooks : IDisposable
     private Config _config;
 
     private delegate long WndprocHookDelegate(ulong hWnd, uint uMsg, ulong wParam, long lParam);
-    private Hook<WndprocHookDelegate> _wndprocHook;
+    [Signature("48 8D 05 ?? ?? ?? ?? C7 44 24 ?? ?? ?? ?? ?? 48 89 44 24 ?? BA", DetourName = nameof(WndprocHook), ScanType = ScanType.StaticAddress)]
+    private Hook<WndprocHookDelegate> _wndprocHook = null!;
 
     private delegate void MainWindowSetBorderlessDelegate(MainWindow* self, bool borderless);
     [Signature("E8 ?? ?? ?? ?? FF 8E ?? ?? ?? ?? E9 ?? ?? ?? ?? 44 38 A7", DetourName = nameof(SetBorderlessDetour))]
@@ -23,13 +23,11 @@ public unsafe class WindowHooks : IDisposable
     {
         _config = config;
 
-        Log($"hwnd: {MainWindow.Instance->Hwnd:X}");
-        var prevWndproc = (nint)GetWindowLongPtrW(MainWindow.Instance->Hwnd, GWLP_WNDPROC);
-        Log($"wndproc: {prevWndproc:X}");
-        _wndprocHook = Hook<WndprocHookDelegate>.FromAddress(prevWndproc, WndprocHook);
-        _wndprocHook.Enable();
-
         SignatureHelper.Initialise(this);
+        PluginLog.Debug($"HWND: {MainWindow.Instance->Hwnd:X}");
+        PluginLog.Debug($"WndProc address: 0x{HookAddressHack(_wndprocHook):X16}");
+        PluginLog.Debug($"SetBorderless address: 0x{HookAddressHack(_setBorderlessHook):X16}");
+        _wndprocHook.Enable();
         _setBorderlessHook.Enable();
 
         Reinit();
@@ -80,14 +78,14 @@ public unsafe class WindowHooks : IDisposable
         switch (uMsg)
         {
             case WM_SIZE:
-                Log($"SIZE: {wParam} {lParam & 0xFFFF}x{lParam >> 16}");
+                PluginLog.Debug($"WM_SIZE: {wParam} {lParam & 0xFFFF}x{lParam >> 16}");
                 break;
 
             case WM_WINDOWPOSCHANGING:
                 if (MainWindow.Instance->Borderless)
                 {
                     var p = (WINDOWPOS*)lParam;
-                    Log($"WINDOWPOSCHANGING: {p->x}x{p->y} + {p->cx}x{p->cy} [{p->flags:X}]");
+                    PluginLog.Debug($"WM_WINDOWPOSCHANGING: {p->x}x{p->y} + {p->cx}x{p->cy} [{p->flags:X}]");
                     if ((p->flags & SWP_NOSIZE) == 0)
                     {
                         // adjust borderless window size to always cover monitor it's on
@@ -98,7 +96,7 @@ public unsafe class WindowHooks : IDisposable
                         p->cx = rc.Right - p->x;
                         p->cy = rc.Bottom - p->y;
                         SyncSwapchainResolution(p->cx, p->cy);
-                        Log($"-> adjusted to {p->x}x{p->y}+{p->cx}x{p->cy}");
+                        PluginLog.Debug($"-> adjusted to {p->x}x{p->y}+{p->cx}x{p->cy}");
                     }
                     return 1;
                 }
@@ -114,7 +112,7 @@ public unsafe class WindowHooks : IDisposable
 
     private void SetBorderlessDetour(MainWindow* self, bool borderless)
     {
-        Log($"set-borderless: {borderless}");
+        PluginLog.Debug($"set-borderless: {borderless}");
         if (borderless)
         {
             // reimplement logic to make window borderless, using better style flags
@@ -175,10 +173,10 @@ public unsafe class WindowHooks : IDisposable
         }
     }
 
-    private void Log(string msg)
+    private static nint HookAddressHack<T>(Hook<T> h) where T : Delegate
     {
-#if DEBUG
-        PluginLog.Debug(msg);
-#endif
+        // for some reason, hook's address is zero, but its impl's address is correct - looks like a bug
+        var impl = h.GetType().GetField("compatHookImpl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(h) as Hook<T>;
+        return impl?.Address ?? 0;
     }
 }
