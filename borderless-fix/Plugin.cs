@@ -1,7 +1,6 @@
-﻿using Dalamud.Game.Command;
-using Dalamud.IoC;
-using Dalamud.Plugin;
+﻿using Dalamud.Plugin;
 using Dalamud.Interface.Windowing;
+using Dalamud.Plugin.Services;
 
 namespace BorderlessFix
 {
@@ -16,11 +15,11 @@ namespace BorderlessFix
         public WindowSystem WindowSystem = new("BorderlessFix");
         private ConfigWindow _wndConfig;
 
-        public Plugin(DalamudPluginInterface dalamud)
+        public Plugin(DalamudPluginInterface dalamud, IGameInteropProvider interop, IPluginLog log)
         {
             Dalamud = dalamud;
             Config = Dalamud.GetPluginConfig() as Config ?? new Config();
-            Hooks = new(Config);
+            Hooks = new(Config, interop, log);
 
             _wndConfig = new ConfigWindow(this);
             WindowSystem.AddWindow(_wndConfig);

@@ -1,5 +1,6 @@
 ﻿using Dalamud.Hooking;
 using Dalamud.Logging;
+using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
 using ImGuiNET;
 using System;
@@ -10,6 +11,7 @@ using static WinAPI;
 public unsafe class WindowHooks : IDisposable
 {
     private Config _config;
+    private IPluginLog _log;
 
     private delegate long WndprocHookDelegate(ulong hWnd, uint uMsg, ulong wParam, long lParam);
     [Signature("48 8D 05 ?? ?? ?? ?? C7 44 24 ?? ?? ?? ?? ?? 48 89 44 24 ?? BA", DetourName = nameof(WndprocHook), ScanType = ScanType.StaticAddress)]
@@ -19,14 +21,15 @@ public unsafe class WindowHooks : IDisposable
     [Signature("E8 ?? ?? ?? ?? FF 8E ?? ?? ?? ?? E9 ?? ?? ?? ?? 44 38 A7", DetourName = nameof(SetBorderlessDetour))]
     private Hook<MainWindowSetBorderlessDelegate> _setBorderlessHook = null!;
 
-    public WindowHooks(Config config)
+    public WindowHooks(Config config, IGameInteropProvider interop, IPluginLog log)
     {
         _config = config;
+        _log = log;
 
-        SignatureHelper.Initialise(this);
-        PluginLog.Debug($"HWND: {MainWindow.Instance->Hwnd:X}");
-        PluginLog.Debug($"WndProc address: 0x{HookAddressHack(_wndprocHook):X16}");
-        PluginLog.Debug($"SetBorderless address: 0x{HookAddressHack(_setBorderlessHook):X16}");
+        interop.InitializeFromAttributes(this);
+        log.Debug($"HWND: {MainWindow.Instance->Hwnd:X}");
+        log.Debug($"WndProc address: 0x{HookAddressHack(_wndprocHook):X16}");
+        log.Debug($"SetBorderless address: 0x{HookAddressHack(_setBorderlessHook):X16}");
         _wndprocHook.Enable();
         _setBorderlessHook.Enable();
 
@@ -78,14 +81,14 @@ public unsafe class WindowHooks : IDisposable
         switch (uMsg)
         {
             case WM_SIZE:
-                PluginLog.Debug($"WM_SIZE: {wParam} {lParam & 0xFFFF}x{lParam >> 16}");
+                _log.Debug($"WM_SIZE: {wParam} {lParam & 0xFFFF}x{lParam >> 16}");
                 break;
 
             case WM_WINDOWPOSCHANGING:
                 if (MainWindow.Instance->Borderless)
                 {
                     var p = (WINDOWPOS*)lParam;
-                    PluginLog.Debug($"WM_WINDOWPOSCHANGING: {p->x}x{p->y} + {p->cx}x{p->cy} [{p->flags:X}]");
+                    _log.Debug($"WM_WINDOWPOSCHANGING: {p->x}x{p->y} + {p->cx}x{p->cy} [{p->flags:X}]");
                     if ((p->flags & SWP_NOSIZE) == 0)
                     {
                         // adjust borderless window size to always cover monitor it's on
@@ -96,7 +99,7 @@ public unsafe class WindowHooks : IDisposable
                         p->cx = rc.Right - p->x;
                         p->cy = rc.Bottom - p->y;
                         SyncSwapchainResolution(p->cx, p->cy);
-                        PluginLog.Debug($"-> adjusted to {p->x}x{p->y}+{p->cx}x{p->cy}");
+                        _log.Debug($"-> adjusted to {p->x}x{p->y}+{p->cx}x{p->cy}");
                     }
                     return 1;
                 }
@@ -112,7 +115,7 @@ public unsafe class WindowHooks : IDisposable
 
     private void SetBorderlessDetour(MainWindow* self, bool borderless)
     {
-        PluginLog.Debug($"set-borderless: {borderless}");
+        _log.Debug($"set-borderless: {borderless}");
         if (borderless)
         {
             // reimplement logic to make window borderless, using better style flags
