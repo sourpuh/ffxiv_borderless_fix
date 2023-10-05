@@ -31,6 +31,7 @@ namespace BorderlessFix
         public void Dispose()
         {
             WindowSystem.RemoveAllWindows();
+            Hooks.Dispose();
         }
     }
 }
