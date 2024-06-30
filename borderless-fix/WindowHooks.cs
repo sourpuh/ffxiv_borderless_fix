@@ -14,11 +14,11 @@ public unsafe class WindowHooks : IDisposable
     private IPluginLog _log;
 
     private delegate long WndprocHookDelegate(ulong hWnd, uint uMsg, ulong wParam, long lParam);
-    [Signature("48 8D 05 ?? ?? ?? ?? C7 44 24 ?? ?? ?? ?? ?? 48 89 44 24 ?? BA", DetourName = nameof(WndprocHook), ScanType = ScanType.StaticAddress)]
+    [Signature("40 55 53 56 57 41 54 41 56 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 E0", DetourName = nameof(WndprocHook))]
     private Hook<WndprocHookDelegate> _wndprocHook = null!;
 
     private delegate void MainWindowSetBorderlessDelegate(MainWindow* self, bool borderless);
-    [Signature("E8 ?? ?? ?? ?? FF 8E ?? ?? ?? ?? E9 ?? ?? ?? ?? 44 38 A7", DetourName = nameof(SetBorderlessDetour))]
+    [Signature("E8 ?? ?? ?? ?? FF 8E ?? ?? ?? ?? E9 ?? ?? ?? ?? 8B 87", DetourName = nameof(SetBorderlessDetour))]
     private Hook<MainWindowSetBorderlessDelegate> _setBorderlessHook = null!;
 
     public WindowHooks(Config config, IGameInteropProvider interop, IPluginLog log)
@@ -28,8 +28,8 @@ public unsafe class WindowHooks : IDisposable
 
         interop.InitializeFromAttributes(this);
         log.Debug($"HWND: {MainWindow.Instance->Hwnd:X}");
-        log.Debug($"WndProc address: 0x{HookAddressHack(_wndprocHook):X16}");
-        log.Debug($"SetBorderless address: 0x{HookAddressHack(_setBorderlessHook):X16}");
+        log.Debug($"WndProc address: 0x{_wndprocHook.Address:X16}");
+        log.Debug($"SetBorderless address: 0x{_setBorderlessHook.Address:X16}");
         _wndprocHook.Enable();
         _setBorderlessHook.Enable();
 
@@ -174,12 +174,5 @@ public unsafe class WindowHooks : IDisposable
                 rc = _config.UseWorkArea ? minfo.rcWork : minfo.rcMonitor;
             }
         }
-    }
-
-    private static nint HookAddressHack<T>(Hook<T> h) where T : Delegate
-    {
-        // for some reason, hook's address is zero, but its impl's address is correct - looks like a bug
-        var impl = h.GetType().GetField("compatHookImpl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)?.GetValue(h) as Hook<T>;
-        return impl?.Address ?? 0;
     }
 }

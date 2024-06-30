@@ -8,14 +8,14 @@ namespace BorderlessFix
     {
         public string Name => "Borderless fix";
 
-        public DalamudPluginInterface Dalamud { get; init; }
+        public IDalamudPluginInterface Dalamud { get; init; }
         public Config Config { get; init; }
         public WindowHooks Hooks { get; init; }
 
         public WindowSystem WindowSystem = new("BorderlessFix");
         private ConfigWindow _wndConfig;
 
-        public Plugin(DalamudPluginInterface dalamud, IGameInteropProvider interop, IPluginLog log)
+        public Plugin(IDalamudPluginInterface dalamud, IGameInteropProvider interop, IPluginLog log)
         {
             Dalamud = dalamud;
             Config = Dalamud.GetPluginConfig() as Config ?? new Config();
