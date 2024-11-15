@@ -44,8 +44,8 @@ public static unsafe class WinAPI
 
     public struct WINDOWPOS
     {
-        public ulong hwnd;
-        public ulong hwndInsertAfter;
+        public nint hwnd;
+        public nint hwndInsertAfter;
         public int x;
         public int y;
         public int cx;
@@ -54,22 +54,22 @@ public static unsafe class WinAPI
     }
 
     [DllImport("user32.dll", ExactSpelling = true)]
-    public static extern ulong GetWindowLongPtrW(ulong hWnd, int nIndex);
+    public static extern ulong GetWindowLongPtrW(nint hWnd, int nIndex);
 
     [DllImport("user32.dll", ExactSpelling = true)]
-    public static extern bool GetWindowRect(ulong hWnd, RECT* lpRect);
+    public static extern bool GetWindowRect(nint hWnd, RECT* lpRect);
 
     [DllImport("user32.dll", ExactSpelling = true)]
-    public static extern ulong SetWindowLongPtrW(ulong hWnd, int nIndex, ulong dwNewLong);
+    public static extern ulong SetWindowLongPtrW(nint hWnd, int nIndex, ulong dwNewLong);
 
     [DllImport("user32.dll", ExactSpelling = true)]
-    public static extern bool SetWindowPos(ulong hWnd, ulong hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+    public static extern bool SetWindowPos(nint hWnd, nint hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
 
     [DllImport("user32.dll", ExactSpelling = true)]
-    public static extern bool ShowWindow(ulong hWnd, int nCmdShow);
+    public static extern bool ShowWindow(nint hWnd, int nCmdShow);
 
     [DllImport("user32.dll", ExactSpelling = true)]
-    public static extern ulong MonitorFromWindow(ulong hwnd, uint dwFlags);
+    public static extern ulong MonitorFromWindow(nint hwnd, uint dwFlags);
 
     [DllImport("user32.dll", ExactSpelling = true)]
     public static extern ulong MonitorFromRect(RECT* lprc, uint dwFlags);

@@ -1,12 +1,12 @@
 ﻿using Dalamud.Hooking;
-using Dalamud.Logging;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using ImGuiNET;
 using System;
+using static BorderlessFix.WinAPI;
 
 namespace BorderlessFix;
-using static WinAPI;
 
 public unsafe class WindowHooks : IDisposable
 {
@@ -17,7 +17,8 @@ public unsafe class WindowHooks : IDisposable
     [Signature("40 55 53 56 57 41 54 41 56 48 8D 6C 24 ?? 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 45 E0", DetourName = nameof(WndprocHook))]
     private Hook<WndprocHookDelegate> _wndprocHook = null!;
 
-    private delegate void MainWindowSetBorderlessDelegate(MainWindow* self, bool borderless);
+    // TODO: add signature to CS
+    private delegate void MainWindowSetBorderlessDelegate(GameWindow* self, bool borderless);
     [Signature("E8 ?? ?? ?? ?? FF 8E ?? ?? ?? ?? E9 ?? ?? ?? ?? 8B 87", DetourName = nameof(SetBorderlessDetour))]
     private Hook<MainWindowSetBorderlessDelegate> _setBorderlessHook = null!;
 
@@ -27,7 +28,7 @@ public unsafe class WindowHooks : IDisposable
         _log = log;
 
         interop.InitializeFromAttributes(this);
-        log.Debug($"HWND: {MainWindow.Instance->Hwnd:X}");
+        log.Debug($"HWND: {Framework.Instance()->GameWindow->WindowHandle:X}");
         log.Debug($"WndProc address: 0x{_wndprocHook.Address:X16}");
         log.Debug($"SetBorderless address: 0x{_setBorderlessHook.Address:X16}");
         _wndprocHook.Enable();
@@ -41,10 +42,10 @@ public unsafe class WindowHooks : IDisposable
         _wndprocHook.Dispose();
         _setBorderlessHook.Dispose();
 
-        if (MainWindow.Instance->Borderless)
+        if (Framework.Instance()->GameWindow->Borderless)
         {
             // restore original style
-            var hwnd = MainWindow.Instance->Hwnd;
+            var hwnd = Framework.Instance()->GameWindow->WindowHandle;
             SetWindowLongPtrW(hwnd, GWLP_STYLE, 0x80000000); // WS_POPUP
             ShowWindow(hwnd, SW_SHOWMAXIMIZED);
             SetWindowPos(hwnd, 0, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_FRAMECHANGED);
@@ -53,16 +54,16 @@ public unsafe class WindowHooks : IDisposable
 
     public void Reinit()
     {
-        if (MainWindow.Instance->Borderless)
+        if (Framework.Instance()->GameWindow->Borderless)
             MakeBorderless();
     }
 
     public void DrawDebug()
     {
-        var wnd = MainWindow.Instance;
-        ImGui.TextUnformatted($"HWND: {wnd->Hwnd:X}");
-        ImGui.TextUnformatted($"Size: {wnd->Width}x{wnd->Height}");
-        ImGui.TextUnformatted($"Pos: {wnd->WindowedX}x{wnd->WindowedY}");
+        var wnd = Framework.Instance()->GameWindow;
+        ImGui.TextUnformatted($"HWND: {wnd->WindowHandle:X}");
+        ImGui.TextUnformatted($"Size: {wnd->WindowWidth}x{wnd->WindowHeight}");
+        ImGui.TextUnformatted($"Pos: {wnd->LastWindowPosX}x{wnd->LastWindowPosY}");
         ImGui.TextUnformatted($"Borderless: {wnd->Borderless}");
         ImGui.TextUnformatted($"MinSize: {wnd->MinWidth}x{wnd->MinHeight}");
 
@@ -71,8 +72,8 @@ public unsafe class WindowHooks : IDisposable
         ImGui.TextUnformatted($"Device new size: {device->NewWidth}x{device->NewHeight}");
         ImGui.TextUnformatted($"Device rrc: {device->RequestResolutionChange}");
 
-        ImGui.TextUnformatted($"WndProc: {GetWindowLongPtrW(wnd->Hwnd, GWLP_WNDPROC):X}");
-        ImGui.TextUnformatted($"Style: {GetWindowLongPtrW(wnd->Hwnd, GWLP_STYLE):X}");
+        ImGui.TextUnformatted($"WndProc: {GetWindowLongPtrW(wnd->WindowHandle, GWLP_WNDPROC):X}");
+        ImGui.TextUnformatted($"Style: {GetWindowLongPtrW(wnd->WindowHandle, GWLP_STYLE):X}");
         ImGui.TextUnformatted($"Composition: {IsCompositionEnabled()}");
     }
 
@@ -85,7 +86,7 @@ public unsafe class WindowHooks : IDisposable
                 break;
 
             case WM_WINDOWPOSCHANGING:
-                if (MainWindow.Instance->Borderless)
+                if (Framework.Instance()->GameWindow->Borderless)
                 {
                     var p = (WINDOWPOS*)lParam;
                     _log.Debug($"WM_WINDOWPOSCHANGING: {p->x}x{p->y} + {p->cx}x{p->cy} [{p->flags:X}]");
@@ -106,20 +107,20 @@ public unsafe class WindowHooks : IDisposable
                 break;
 
             case WM_NCCALCSIZE:
-                if (wParam != 0 && MainWindow.Instance->Borderless)
+                if (wParam != 0 && Framework.Instance()->GameWindow->Borderless)
                     return 0;
                 break;
         }
         return _wndprocHook.Original(hWnd, uMsg, wParam, lParam);
     }
 
-    private void SetBorderlessDetour(MainWindow* self, bool borderless)
+    private void SetBorderlessDetour(GameWindow* self, bool borderless)
     {
         _log.Debug($"set-borderless: {borderless}");
         if (borderless)
         {
             // reimplement logic to make window borderless, using better style flags
-            MainWindow.Instance->Borderless = true;
+            self->Borderless = true;
             MakeBorderless();
         }
         else
@@ -131,7 +132,7 @@ public unsafe class WindowHooks : IDisposable
 
     private void MakeBorderless()
     {
-        var hwnd = MainWindow.Instance->Hwnd;
+        var hwnd = Framework.Instance()->GameWindow->WindowHandle;
         RECT rc;
         GetWindowRect(hwnd, &rc);
         ConvertToBorderlessRect(ref rc);
