@@ -1,13 +1,10 @@
 ﻿using Dalamud.Configuration;
 using System;
+namespace BorderlessFix;
 
-namespace BorderlessFix
+[Serializable]
+public class Config : IPluginConfiguration
 {
-    [Serializable]
-    public class Config : IPluginConfiguration
-    {
-        public int Version { get; set; } = 0;
-
-        public bool UseWorkArea;
-    }
+    public bool UseWorkArea;
+    public int Version { get; set; } = 0;
 }

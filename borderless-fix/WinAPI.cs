@@ -1,5 +1,4 @@
 ﻿using System.Runtime.InteropServices;
-
 namespace BorderlessFix;
 
 public static unsafe class WinAPI

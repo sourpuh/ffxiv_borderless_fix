@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.Sdk/12.0.2">
+<Project Sdk="Dalamud.NET.Sdk/13.0.0">
   <PropertyGroup>
     <Authors></Authors>
     <Company></Company>
@@ -18,4 +18,8 @@
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
+    
+  <ItemGroup>
+    <PackageReference Update="DalamudPackager" Version="13.0.0" />
+  </ItemGroup>
 </Project>
