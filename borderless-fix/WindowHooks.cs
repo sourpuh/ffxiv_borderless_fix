@@ -2,7 +2,7 @@
 using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
-using ImGuiNET;
+using Dalamud.Bindings.ImGui;
 using System;
 using static BorderlessFix.WinAPI;
 
