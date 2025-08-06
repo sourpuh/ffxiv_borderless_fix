@@ -1,8 +1,8 @@
-﻿using Dalamud.Hooking;
+﻿global using Dalamud.Bindings.ImGui;
+using Dalamud.Hooking;
 using Dalamud.Plugin.Services;
 using Dalamud.Utility.Signatures;
 using FFXIVClientStructs.FFXIV.Client.System.Framework;
-using ImGuiNET;
 using System;
 using static BorderlessFix.WinAPI;
 
@@ -19,7 +19,7 @@ public unsafe class WindowHooks : IDisposable
 
     // TODO: add signature to CS
     private delegate void MainWindowSetBorderlessDelegate(GameWindow* self, bool borderless);
-    [Signature("E8 ?? ?? ?? ?? FF 8E ?? ?? ?? ?? E9 ?? ?? ?? ?? 8B 87", DetourName = nameof(SetBorderlessDetour))]
+    [Signature("40 53 48 83 EC 60 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 44 24 ?? 48 8B D9 48 8B 49 18", DetourName = nameof(SetBorderlessDetour))]
     private Hook<MainWindowSetBorderlessDelegate> _setBorderlessHook = null!;
 
     public WindowHooks(Config config, IGameInteropProvider interop, IPluginLog log)

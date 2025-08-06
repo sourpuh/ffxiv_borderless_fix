@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.Sdk/12.0.2">
+<Project Sdk="Dalamud.NET.Sdk/13.0.0">
   <PropertyGroup>
     <Authors></Authors>
     <Company></Company>
-    <Version>0.0.0.6</Version>
+    <Version>0.0.0.7</Version>
     <Description>Proper borderless window mode.</Description>
     <Copyright></Copyright>
-    <PackageProjectUrl>https://github.com/awgil/ffxiv_borderless_fix</PackageProjectUrl>
+    <PackageProjectUrl>https://github.com/sourpuh/ffxiv_borderless_fix</PackageProjectUrl>
   </PropertyGroup>
 
   <PropertyGroup>
